@@ -107,7 +107,7 @@ The frontend needs the API's URL at build time, so do this one first.
 
    | Setting | Value |
    | --- | --- |
-   | Build command | `npm install && npx prisma generate && npm run build -w @career-prep/shared && npm run build -w @career-prep/api` |
+   | Build command | `npm install --include=dev && npx prisma generate && npm run build -w @career-prep/shared && npm run build -w @career-prep/api` |
    | Start command | `npx prisma migrate deploy && npm run start -w @career-prep/api` |
    | Node version | 20.11 or newer |
 
@@ -125,6 +125,11 @@ The frontend needs the API's URL at build time, so do this one first.
    | `LLM_API_KEY` | Your **rotated** provider key |
    | `LLM_MODEL` | `gpt-5.5`, or leave unset |
    | `RESUME_STORAGE_MODE` | `memory` unless you attach a persistent disk |
+
+   **`--include=dev` is required.** With `NODE_ENV=production` set, `npm
+   install` omits devDependencies - which is where `typescript` and the Prisma
+   CLI live. Without the flag the build fails at `tsc: not found`. The runtime
+   is unaffected: only the build needs them.
 
    **Do not set `API_PORT`.** It exists only for local development, where a
    combined launcher sets `PORT` for the web server. It takes precedence over
