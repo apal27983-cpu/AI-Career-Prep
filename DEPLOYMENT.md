@@ -245,18 +245,32 @@ stop and report it.
 ## 7. Install on Android
 
 1. Open the HTTPS Vercel URL in **Chrome on Android**.
-2. Either accept the install prompt, or use **⋮ → Add to Home screen** /
-   **Install app**.
+2. Tap **Install app** in the header, or under the sign-in form if you are not
+   signed in yet. Failing that, use **⋮ → Add to Home screen** / **Install app**.
 3. Launch it from the home screen. It opens standalone, with no address bar
    and the indigo theme colour in the status bar.
 
+### Share the root URL, not a deep link
+
+Send people `https://<your-vercel-url>`, not `/dashboard`. Protected routes
+redirect an unauthenticated visitor to `/login`, which is why the install button
+also appears on that screen.
+
 Notes, honestly:
 
-- Chrome and Edge on Android support this. **Firefox and some manufacturer
-  browsers present it differently or not at all**, so do not expect an identical
-  button everywhere.
+- **A link opened inside WhatsApp, Instagram, Telegram or Facebook will not
+  offer installation**, because those are embedded webviews, not browsers. This
+  is the most common reason someone reports seeing no install option. The app
+  detects this and tells them to reopen the page in Chrome or Safari.
+- Chrome, Edge and Samsung Internet on Android support installation. **Firefox
+  and some manufacturer browsers present it differently or not at all.** Where
+  the browser gives no signal, the button hides itself rather than promising
+  something that may not work.
+- Chrome shows no automatic banner. Without the in-app button the only route is
+  the ⋮ overflow menu, which is why that button exists.
 - iOS Safari has no install prompt — it is **Share → Add to Home Screen**. The
-  app has the Apple meta tags for this, but iOS support was not tested.
+  app has the Apple meta tags and shows those steps, but iOS was not tested on a
+  device.
 - **HTTPS is required.** It will not install over plain HTTP, except on
   `localhost`.
 

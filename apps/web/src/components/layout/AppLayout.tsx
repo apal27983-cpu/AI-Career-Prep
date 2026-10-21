@@ -18,6 +18,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
 import { cn } from '../../utils/cn';
 import { Button } from '../ui/Button';
+import { InstallAppButton } from './InstallAppButton';
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -173,6 +174,8 @@ export function AppLayout() {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Hides itself when the app is already installed. */}
+              <InstallAppButton />
               <div className="hidden text-right sm:block">
                 <p className="text-sm font-medium leading-tight text-slate-900">{user?.name}</p>
                 <p className="text-xs leading-tight text-slate-500">{user?.email}</p>

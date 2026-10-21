@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { GaugeCircle } from 'lucide-react';
+import { InstallAppButton } from './InstallAppButton';
 
 /** Centred shell for the sign-in and sign-up screens. */
 export function AuthLayout({
@@ -33,6 +34,15 @@ export function AuthLayout({
         </div>
 
         {footer ? <div className="mt-4 text-center text-sm text-slate-600">{footer}</div> : null}
+
+        {/*
+          Sign-in is where someone following a shared link lands, so the offer
+          has to appear here as well - the header inside the app comes far too
+          late for a visitor who has not signed up yet.
+        */}
+        <div className="mt-6 flex justify-center">
+          <InstallAppButton />
+        </div>
       </div>
     </div>
   );
