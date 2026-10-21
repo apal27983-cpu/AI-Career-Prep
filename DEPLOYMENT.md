@@ -68,6 +68,26 @@ The frontend needs the API's URL at build time, so do this one first.
    Neon's free plan is permanent and needs no card. Avoid Render's free
    Postgres for anything you want to keep: it expires 30 days after creation,
    then is deleted after a 14-day grace period.
+
+   **In Neon, use the green "Connect" button** at the top of the sidebar - the
+   connection string is not under Settings.
+
+   **Copy the direct connection string, not the pooled one.** Neon offers both:
+
+   | Kind | Hostname contains | Use |
+   | --- | --- | --- |
+   | Direct | `ep-xxx.region.aws.neon.tech` | **This one.** |
+   | Pooled | `ep-xxx-pooler.region.aws.neon.tech` | Not here |
+
+   In the Connect dialog, turn **Connection pooling off** to get the direct
+   string. Our start command runs `prisma migrate deploy`, and Prisma CLI
+   commands need a direct connection for schema operations - against the pooled
+   endpoint the migration step can fail.
+
+   A single Render instance does not need Neon's pooler: Prisma keeps its own
+   connection pool. If you later run several instances, switch `DATABASE_URL`
+   to the pooled string and add `directUrl` to `prisma/schema.prisma` pointing
+   at a separate direct-connection variable.
 2. Create a Node service pointing at this repository.
 3. Settings:
 
