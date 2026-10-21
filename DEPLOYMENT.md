@@ -72,41 +72,36 @@ The frontend needs the API's URL at build time, so do this one first.
    **In Neon, use the green "Connect" button** at the top of the sidebar - the
    connection string is not under Settings.
 
-   **Copy the direct connection string, not the pooled one.** Neon offers both:
+   **Use the pooled string exactly as Neon gives it to you**, the one whose
+   hostname contains `-pooler`:
 
-   | Kind | Hostname contains | Use |
-   | --- | --- | --- |
-   | Direct | `ep-xxx.region.aws.neon.tech` | **This one.** |
-   | Pooled | `ep-xxx-pooler.region.aws.neon.tech` | Not here |
+   ```
+   postgresql://USER:PASSWORD@ep-xxx-pooler.REGION.aws.neon.tech/neondb?sslmode=require&channel_binding=require&connect_timeout=15
+   ```
 
-   In the Connect dialog, turn **Connection pooling off** to get the direct
-   string. Our start command runs `prisma migrate deploy`, and Prisma CLI
-   commands need a direct connection for schema operations - against the pooled
-   endpoint the migration step can fail.
-
-   A single Render instance does not need Neon's pooler: Prisma keeps its own
-   connection pool. If you later run several instances, switch `DATABASE_URL`
-   to the pooled string and add `directUrl` to `prisma/schema.prisma` pointing
-   at a separate direct-connection variable.
-
-   **Append `connect_timeout=15`.** Neon's free plan suspends the compute after
-   five minutes of inactivity and wakes it on the next connection. Prisma's
-   default connect timeout is five seconds, which is often shorter than that
-   wake-up, and the deploy fails with:
+   Do not strip `-pooler` out. Neon's free plan suspends the compute after five
+   minutes of inactivity. The pooler stays up and wakes the compute for you; a
+   direct connection to a suspended compute fails immediately with:
 
    ```
    Error: P1001: Can't reach database server at `ep-xxx...:5432`
    ```
 
-   Neon's own guidance is to raise the timeout rather than retry. The finished
-   value looks like:
+   That failure arrives in about a second, so it is not a timeout and raising
+   `connect_timeout` does not fix it. `connect_timeout=15` is still worth
+   appending as headroom for a slow wake, but the pooled host is what makes the
+   deploy reliable.
 
-   ```
-   postgresql://USER:PASSWORD@ep-xxx.REGION.aws.neon.tech/neondb?sslmode=require&channel_binding=require&connect_timeout=15
-   ```
+   Both endpoints resolve to the same IP addresses - Neon routes by TLS SNI -
+   so this is not a DNS or IPv6 problem, and switching hostnames is the whole
+   fix.
 
-   If it still times out on the very first deploy, raise it to 30 - the first
-   connection after a project has been idle for a long time is the slowest.
+   `prisma migrate deploy` works through the pooler: verified against a real
+   Neon database, both for applying migrations and for ordinary queries. If a
+   future migration ever fails there, run it once from your machine with the
+   direct string (same host without `-pooler`) while the compute is awake, then
+   redeploy.
+
 2. Create a Node service pointing at this repository.
 3. Settings:
 
