@@ -1,0 +1,276 @@
+// AI Career Preparation - data model
+//
+// Every user-owned resource carries a userId and is read through a query that
+// filters on the authenticated user, so ownership is enforced in the database
+// layer rather than trusted from the client.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ExperienceLevel {
+  STUDENT_FRESHER
+  ENTRY_LEVEL
+  INTERMEDIATE
+  EXPERIENCED
+  CAREER_SWITCHER
+}
+
+enum InterviewMode {
+  TECHNICAL
+  NON_TECHNICAL
+  APTITUDE
+  HR
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum ProcessingStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AnswerFormat {
+  TEXT
+  MULTIPLE_CHOICE
+}
+
+enum ContentSource {
+  AI_GENERATED
+  CURATED_FALLBACK
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @db.VarChar(120)
+  email        String   @unique @db.VarChar(254)
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  profile   CandidateProfile?
+  sessions  AuthSession[]
+  resumes   Resume[]
+  analyses  SkillGapAnalysis[]
+  fitReports ResumeFitAnalysis[]
+  interviews InterviewSession[]
+  aiUsage   AiUsageLog[]
+
+  @@index([email])
+  @@map("users")
+}
+
+/// Opaque server-side sessions. The cookie carries a random token; only its
+/// SHA-256 hash is stored, so a database leak does not hand over live sessions.
+model AuthSession {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  tokenHash  String   @unique
+  csrfSecret String
+  userAgent  String?  @db.VarChar(400)
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+model CandidateProfile {
+  id                    String          @id @default(uuid()) @db.Uuid
+  userId                String          @unique @db.Uuid
+  fullName              String          @db.VarChar(120)
+  currentRole           String          @db.VarChar(120)
+  targetRole            String          @db.VarChar(120)
+  experienceLevel       ExperienceLevel
+  yearsOfExperience     Int             @default(0)
+  education             String          @db.VarChar(300)
+  skills                String[]
+  learningGoals         String[]
+  preferredInterviewMode InterviewMode  @default(TECHNICAL)
+  targetIndustry        String          @default("") @db.VarChar(120)
+  careerObjective       String          @default("") @db.VarChar(1500)
+  jobDescription        String          @default("")
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("candidate_profiles")
+}
+
+model Resume {
+  id               String           @id @default(uuid()) @db.Uuid
+  userId           String           @db.Uuid
+  originalFilename String           @db.VarChar(260)
+  mimeType         String           @db.VarChar(120)
+  fileSize         Int
+  extractedText    String           @default("")
+  /// Structured preview the candidate can correct. Shape: ParsedResume.
+  parsedData       Json?
+  /// Server-generated key inside the private storage directory. Never a client path.
+  storageKey       String?          @db.VarChar(260)
+  processingStatus ProcessingStatus @default(PENDING)
+  processingError   String?         @db.VarChar(400)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  analyses   SkillGapAnalysis[]
+  fitReports ResumeFitAnalysis[]
+
+  @@index([userId, createdAt])
+  @@map("resumes")
+}
+
+/// "How well does this resume fit this role?" - stored so reopening the page
+/// does not pay for the analysis again.
+model ResumeFitAnalysis {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @db.Uuid
+  resumeId       String        @db.Uuid
+  targetRole     String        @db.VarChar(120)
+  jobDescription String?
+  /// Validated ResumeFitReport.
+  reportData     Json
+  /// Deterministic ResumeQualityChecks, computed in code rather than by a model.
+  checksData     Json
+  matchScore     Int
+  generatedBy    ContentSource @default(AI_GENERATED)
+  createdAt      DateTime      @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume Resume @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([resumeId, createdAt])
+  @@map("resume_fit_analyses")
+}
+
+model SkillGapAnalysis {
+  id             String        @id @default(uuid()) @db.Uuid
+  userId         String        @db.Uuid
+  resumeId       String?       @db.Uuid
+  targetRole     String        @db.VarChar(120)
+  jobDescription String?
+  /// Validated SkillGapReport.
+  analysisData   Json
+  readinessScore Int
+  generatedBy    ContentSource @default(AI_GENERATED)
+  createdAt      DateTime      @default(now())
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  resume Resume? @relation(fields: [resumeId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([resumeId])
+  @@map("skill_gap_analyses")
+}
+
+model InterviewSession {
+  id                 String          @id @default(uuid()) @db.Uuid
+  userId             String          @db.Uuid
+  mode               InterviewMode
+  targetRole         String          @db.VarChar(120)
+  experienceLevel    ExperienceLevel
+  difficulty         Difficulty
+  status             SessionStatus   @default(IN_PROGRESS)
+  totalQuestions     Int
+  completedQuestions Int             @default(0)
+  /// Validated InterviewSummary, written when the session is completed.
+  finalSummary       Json?
+  averageScore       Int?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  completedAt        DateTime?
+
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  questions InterviewQuestion[]
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+  @@map("interview_sessions")
+}
+
+model InterviewQuestion {
+  id            String        @id @default(uuid()) @db.Uuid
+  sessionId     String        @db.Uuid
+  questionText  String
+  topic         String        @db.VarChar(120)
+  difficulty    Difficulty
+  questionOrder Int
+  answerFormat  AnswerFormat  @default(TEXT)
+  /// Multiple-choice options. Safe to send to the browser.
+  options       String[]
+  hint          String?       @db.VarChar(400)
+  source        ContentSource @default(AI_GENERATED)
+  /// Expected answer, rubric and correct option index. NEVER serialised to the
+  /// client before the answer is submitted.
+  gradingMetadata Json
+  createdAt     DateTime      @default(now())
+
+  session InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  answer  InterviewAnswer?
+
+  @@unique([sessionId, questionOrder])
+  @@index([sessionId])
+  @@map("interview_questions")
+}
+
+model InterviewAnswer {
+  id                  String   @id @default(uuid()) @db.Uuid
+  /// One answer per question: the unique constraint is what stops a double
+  /// submission from producing two evaluations.
+  questionId          String   @unique @db.Uuid
+  answerText          String
+  selectedOptionIndex Int?
+  /// Validated AnswerEvaluation.
+  evaluationData      Json
+  overallScore        Int
+  idempotencyKey      String?  @db.VarChar(100)
+  submittedAt         DateTime @default(now())
+
+  question InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([questionId])
+  @@map("interview_answers")
+}
+
+/// Per-user AI call accounting. Holds no prompt text and no secrets.
+model AiUsageLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  operation  String   @db.VarChar(60)
+  provider   String   @db.VarChar(40)
+  model      String   @db.VarChar(80)
+  inputTokens  Int    @default(0)
+  outputTokens Int    @default(0)
+  durationMs Int      @default(0)
+  succeeded  Boolean  @default(true)
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("ai_usage_logs")
+}

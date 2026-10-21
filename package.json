@@ -1,0 +1,52 @@
+{
+  "name": "ai-career-preparation",
+  "private": true,
+  "version": "0.1.0",
+  "description": "AI Career Preparation SaaS MVP - resume analysis, skill gap reports and AI interview practice",
+  "license": "UNLICENSED",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "dev": "npm run build -w @career-prep/shared && concurrently -n api,web -c cyan,magenta \"npm run dev -w @career-prep/api\" \"npm run dev -w @career-prep/web\"",
+    "build": "npm run build -w @career-prep/shared && npm run build -w @career-prep/api && npm run build -w @career-prep/web",
+    "start": "npm run start -w @career-prep/api",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,css}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md,css}\"",
+    "typecheck": "npm run typecheck -w @career-prep/shared && npm run typecheck -w @career-prep/api && npm run typecheck -w @career-prep/web",
+    "test": "npm run build -w @career-prep/shared && npm run test -w @career-prep/api && npm run test -w @career-prep/web",
+    "test:unit": "npm run build -w @career-prep/shared && npm run test:unit -w @career-prep/api",
+    "test:integration": "npm run build -w @career-prep/shared && npm run test:integration -w @career-prep/api",
+    "test:e2e": "playwright test",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:studio": "prisma studio",
+    "prisma:seed": "tsx --env-file-if-exists=.env prisma/seed.ts",
+    "db:reset": "prisma migrate reset"
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma",
+    "seed": "tsx --env-file-if-exists=.env prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.17.0",
+    "@types/node": "22.10.5",
+    "concurrently": "9.1.2",
+    "eslint": "^9.37.0",
+    "eslint-config-prettier": "9.1.0",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "prettier": "3.4.2",
+    "prisma": "6.2.1",
+    "tsx": "4.19.2",
+    "typescript": "5.7.2",
+    "typescript-eslint": "8.19.1",
+    "vitest": "2.1.8"
+  }
+}
