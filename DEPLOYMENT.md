@@ -6,7 +6,7 @@ This app is two deployables plus a database:
 | --- | --- | --- |
 | `apps/web` | Static React build (the PWA) | Vercel |
 | `apps/api` | Long-running Express server | Render / Railway / Fly.io |
-| PostgreSQL | Managed database | Neon / Supabase / Render |
+| PostgreSQL | Managed database | Neon (free plan is permanent) |
 
 **Vercel hosts the frontend only.** The API keeps a database connection pool,
 writes uploaded files and runs for up to 150 s on AI routes, so it needs a real
@@ -64,12 +64,16 @@ After pushing, open the repository on GitHub and confirm `.env` is absent.
 The frontend needs the API's URL at build time, so do this one first.
 
 1. Create a managed PostgreSQL database and copy its connection string.
+
+   Neon's free plan is permanent and needs no card. Avoid Render's free
+   Postgres for anything you want to keep: it expires 30 days after creation,
+   then is deleted after a 14-day grace period.
 2. Create a Node service pointing at this repository.
 3. Settings:
 
    | Setting | Value |
    | --- | --- |
-   | Build command | `npm install && npm run build -w @career-prep/shared && npm run build -w @career-prep/api && npx prisma generate` |
+   | Build command | `npm install && npx prisma generate && npm run build -w @career-prep/shared && npm run build -w @career-prep/api` |
    | Start command | `npx prisma migrate deploy && npm run start -w @career-prep/api` |
    | Node version | 20.11 or newer |
 
@@ -87,6 +91,15 @@ The frontend needs the API's URL at build time, so do this one first.
    | `LLM_API_KEY` | Your **rotated** provider key |
    | `LLM_MODEL` | `gpt-5.5`, or leave unset |
    | `RESUME_STORAGE_MODE` | `memory` unless you attach a persistent disk |
+
+   **Do not set `API_PORT`.** It exists only for local development, where a
+   combined launcher sets `PORT` for the web server. It takes precedence over
+   `PORT`, so setting it on a host that assigns its own port stops the server
+   binding where the platform expects and the deploy fails its health check.
+   Leave it unset and the platform's `PORT` is used.
+
+   Do not paste your local `.env` wholesale for the same reason - it contains
+   `API_PORT=4000`.
 
    Generate the session secret with:
 
