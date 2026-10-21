@@ -111,6 +111,23 @@ The frontend needs the API's URL at build time, so do this one first.
    | Output directory | `apps/web/dist` |
    | Install command | `npm install` |
 
+### What `vercel.json` does
+
+It is strict JSON validated against Vercel's schema, so it carries no comments.
+For the record:
+
+| Entry | Why |
+| --- | --- |
+| `rewrites: /((?!api/).*)` | React Router uses history mode, so client routes must be served the SPA shell. Static files are matched first, and `/api` is excluded so it is never answered with HTML. |
+| `headers` for `/sw.js` | The service worker must never come from a stale cache, or users stay pinned to an old deployment. |
+| `headers` for `/manifest.webmanifest` | Correct `application/manifest+json` content type, revalidated every load. |
+| `headers` for `/assets/(.*)` | Hashed build output is immutable and can be cached for a year. |
+| `headers` for `/(.*)` | Baseline security headers. |
+
+Do not add a `comment` key to any entry: `rewrites` and `headers` items set
+`additionalProperties: false`, and the import fails with
+*"`headers[0]` should NOT have additional property `comment`"*.
+
 3. Add one environment variable:
 
    | Variable | Value |
