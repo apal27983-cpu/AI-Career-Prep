@@ -134,7 +134,9 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['SESSION_COOKIE_SAMESITE'],
         message:
-          'SameSite=None requires the Secure flag, which is only set when NODE_ENV is "production". Use "lax" for local development.',
+          'SameSite=None requires the Secure cookie flag, which this app only sets when NODE_ENV is "production". ' +
+          'If you are deploying, set NODE_ENV="production" - do NOT switch to "lax", because a Lax cookie is not sent ' +
+          'cross-site and every signed-in request would fail. For local development, "lax" is correct.',
       });
     }
     if (value.NODE_ENV === 'production' && value.LLM_PROVIDER === 'mock') {
