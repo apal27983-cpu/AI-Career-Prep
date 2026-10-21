@@ -126,10 +126,17 @@ The frontend needs the API's URL at build time, so do this one first.
    | `LLM_MODEL` | `gpt-5.5`, or leave unset |
    | `RESUME_STORAGE_MODE` | `memory` unless you attach a persistent disk |
 
-   **`--include=dev` is required.** With `NODE_ENV=production` set, `npm
-   install` omits devDependencies - which is where `typescript` and the Prisma
-   CLI live. Without the flag the build fails at `tsc: not found`. The runtime
-   is unaffected: only the build needs them.
+   **devDependencies must survive the install.** With `NODE_ENV=production`
+   set, `npm install` omits them - and `typescript`, `@types/node` and the
+   Prisma CLI all live there, so the build dies at:
+
+   ```
+   error TS2688: Cannot find type definition file for 'node'
+   ```
+
+   The repository handles this itself: a committed `.npmrc` sets `include=dev`,
+   so any host builds correctly without a dashboard change. The `--include=dev`
+   in the build command above is belt and braces for anyone who removes it.
 
    **Do not set `API_PORT`.** It exists only for local development, where a
    combined launcher sets `PORT` for the web server. It takes precedence over
